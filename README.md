@@ -21,4 +21,6 @@ This includes:
 
 -Random Forest (U-Net from scratch as a feature extractor) #NOT USED IN THE FINAL PROJECT
 
+-Fully Convolutional Network #NOT USED IN THE FINAL PROJECT
+
 
