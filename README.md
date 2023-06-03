@@ -1,6 +1,8 @@
 # ImageSegmentationProject
 All the code used for my model implementations in my bachelor thesis.
 This includes: 
+
+
 -U-Net from Scratch:
   +Perfomarce metric calculations and visualizations etc...
 -U-Net Pre-trained VGG16
