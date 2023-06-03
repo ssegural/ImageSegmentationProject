@@ -185,7 +185,7 @@ def train_and_visualize(model, images, masks, epochs, batch_size, n_splits=5):
         plt.tight_layout()
         plt.show()
 
-    model_save_path = Path("C:/Users/ssegu/Documents/Uni/BachelorProject/Models/480DataSets_100epochs_augmented_crossval.hdf5")
+    model_save_path = Path("")
     model.save(model_save_path)
 
     return history_list
@@ -199,7 +199,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import jaccard_score
 from tensorflow.keras.models import load_model, Model
-model = load_model("C:/Users/ssegu/Documents/Uni/BachelorProject/Models/480DataSets_100epochs_augmented_crossval.hdf5")
+model = load_model("")
 
 # Function to compute the intersection over union (IoU) metric
 def compute_iou(y_true, y_pred):
