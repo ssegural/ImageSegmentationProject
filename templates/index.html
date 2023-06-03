@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Segmentation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.5.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        h1 {
+            font-size: 48px;
+            color: #5a6268;
+            margin-top: 20px;
+        }
+
+        .author {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 14px;
+            color: #5a6268;
+        }
+
+        .btn-container {
+            display: flex;
+            justify-content: space-evenly;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            width: 200px;
+        }
+
+        .img-thumbnail {
+            max-width: 500px;
+        }
+
+        .image-display {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .result-display {
+            border-top: 2px solid #5a6268;
+            padding-top: 20px;
+        }
+
+        #analysisResults {
+            margin-top: 20px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center">Image Segmentation</h1>
+        <div class="author">By Sergio Segura</div>
+        <input type="file" id="inputImage" accept="image/*" class="form-control">
+        <select id="modelSelect" class="form-select my-3">
+            <option value="model1">U-Net Model</option>
+            <option value="model2">VGG16 U-Net Model</option>
+        </select>
+        <div class="btn-container">
+            <button id="segmentBtn" onclick="segmentImage()" class="btn btn-primary">Segment Image</button>
+            <button id="analyzeGrainsBtn" onclick="analyzeGrains()" class="btn btn-primary segment-btn" disabled>Analyze Grains</button>
+        </div>
+        <div class="image-display">
+            <div>
+                <h3>Original Image</h3>
+                <img id="displayImage" class="img-thumbnail">
+                <div id="analysisResults">
+                    <h3 class="mb-4">Analysis Results</h3>
+                    <p id="averageGrainSize"></p>
+                    <p id="averageArea"></p>
+                    <p id="numGrains"></p>
+                </div>
+            </div>
+            <div>
+                <h3>Segmented Image</h3>
+                <img id="segmentedImage" class="img-thumbnail">
+                <h3 class="mt-4">Combined Lines</h3>
+                <img id="combinedLines" class="img-thumbnail">
+            </div>
+        </div>
+        <h3 class="mt-4">Histogram</h3>
+        <canvas id="histogram"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        document.getElementById('inputImage').addEventListener('change', function (event) {
+            let reader = new FileReader();
+            reader.onload = function () {
+                let img = document.getElementById('displayImage');
+                img.src = reader.result;
+            };
+            reader.readAsDataURL(event.target.files[0]);
+        });
+
+        function segmentImage() {
+            let img = document.getElementById('displayImage');
+            let model = document.getElementById('modelSelect').value;
+            let xhr = new XMLHttpRequest();
+            xhr.open('POST', '/segment', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    let res = JSON.parse(xhr.responseText);
+                    let segImg = document.getElementById('segmentedImage');
+                    segImg.src = 'data:image/png;base64,' + res.mask;
+                    segImg.onload = function () {
+                        // Enable the analyzeGrains button after the mask is loaded
+                        document.getElementById("analyzeGrainsBtn").disabled = false;
+                    };
+                }
+            };
+            xhr.send('image=' + encodeURIComponent(img.src) + '&model=' + encodeURIComponent(model));
+        }
+
+    </script>
+    <script>
+        function analyzeGrains() {
+            var mask = document.getElementById('segmentedImage');
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/analyze', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+            xhr.onload = function () {
+                if (this.status == 200) {
+                    var res = JSON.parse(this.responseText);
+                    document.getElementById('averageGrainSize').innerHTML = "Average Grain Size: " + res.averageGrainSize;
+                    document.getElementById('averageArea').innerHTML = "Average Area: " + res.averageArea;
+                    document.getElementById('numGrains').innerHTML = "Number of Grains: " + res.numGrains;
+                    document.getElementById('combinedLines').src = 'data:image/png;base64,' + res.combinedLines;
+                    var histogramData = [];
+                    for (var i = 0; i < res.histogram.frequencies.length; i++) {
+                        var binStart = res.histogram.bin_edges[i];
+                        var binEnd = res.histogram.bin_edges[i + 1];
+                        histogramData.push({
+                            x: (binStart + binEnd) / 2,
+                            y: res.histogram.frequencies[i]
+                        });
+                    }
+
+                    new Chart(document.getElementById('histogram'), {
+                        type: 'bar',
+                        data: {
+                            datasets: [{
+                                label: 'Histogram Area Distribution',
+                                data: histogramData,
+                                backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                                borderColor: 'rgba(0, 123, 255, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                x: {
+                                    type: 'linear',
+                                    title: {
+                                        display: true,
+                                        text: 'Area'
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Frequency'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    console.error('Error: ' + this.status + ' ' + this.statusText);
+                }
+            };
+
+            xhr.send('image=' + encodeURIComponent(mask.src));
+        }
+
+    </script>
+</body>
+</html>
